@@ -1,0 +1,6 @@
+.env
+.agent/
+node_modules/
+.npm-cache/
+coverage/
+*.log

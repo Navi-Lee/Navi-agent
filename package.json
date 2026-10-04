@@ -1,0 +1,21 @@
+{
+  "name": "simple-agent-harness",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/cli.js",
+    "chat": "node --env-file-if-exists=.env src/chat-cli.js",
+    "demo:rag": "node examples/rag-demo.js",
+    "demo:mcp": "node examples/mcp-demo.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.3.0",
+    "@modelcontextprotocol/server": "2.3.0",
+    "zod": "4.6.5"
+  }
+}
