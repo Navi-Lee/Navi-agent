@@ -27,6 +27,7 @@
 - `src/tools.js`：工具注册、路径校验、进程执行、网页获取。`createTools(workspace)` 的 workspace 应为绝对真实目录。
 - `src/session.js`：`createSessionStore(workspace)` 提供 `newId / save / load / list`。
 - `src/cli.js`：解析参数、用户输入、确认和日志。不把确认逻辑写进模型。
+- `src/terminal-ui.js`：原生终端选择菜单与文字输入；`select` 返回选项值（Esc 返回 null），`question` 返回文字，`close` 取消输入并释放终端。方向键只改变用户的选择，不触发模型请求。两种输入共用一个界面对象，逐次移除监听器并恢复 raw 模式，退出时暂停输入流。执行确认默认拒绝；`--no-menu` 保留传统输入。
 - `src/knowledge.js`：`createKnowledgeTool(workspace, { root = '.' })` 返回 `knowledge_search` 工具；按需检索文本并返回来源位置。
 - `src/mcp.js`：`connectMcpServers(servers, { signal, timeoutMs = 30000 })` 返回 `{ tools, close }`，将 MCP 工具适配为相同的工具接口。
 - `src/mcp-config.js`：`loadMcpConfig(workspace, configPath)` 校验显式指定的本地配置，服务工作目录使用配置文件父目录。

@@ -7,6 +7,60 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
+test('交互菜单：查看工具、目录选择、任务输入、默认拒绝与显式授权、正常退出', { timeout: 15000 }, async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'menu-cli-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'use'));
+  await writeFile(path.join(root, 'note.txt'), 'before');
+  const server = http.createServer(async (req, res) => {
+    let body = ''; for await (const chunk of req) body += chunk;
+    const { messages } = JSON.parse(body);
+    const result = messages.find(m => m.role === 'tool');
+    const message = result
+      ? { role: 'assistant', content: JSON.parse(result.content).ok ? '修改完成' : '写入被拒绝' }
+      : { role: 'assistant', content: null, tool_calls: [{ id: 'write', type: 'function', function: { name: 'write_file', arguments: '{"path":"note.txt","content":"after"}' } }] };
+    res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message }] }));
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  for (const allow of [false, true]) {
+    // 管道中模拟终端属性，仍启动完整 CLI，按真实按键走菜单；模型用本地 HTTP 服务代替。
+    const script = `Object.defineProperty(process.stdin,'isTTY',{value:true});
+process.stdin.setRawMode=value=>{process.stdin.isRaw=value;return process.stdin;};
+Object.defineProperty(process.stdout,'isTTY',{value:true});
+process.argv=['node','--workspace',${JSON.stringify(root)}];
+await import(${JSON.stringify(new URL('../src/cli.js', import.meta.url).href)});`;
+    const child = spawn(process.execPath, ['--input-type=module', '-e', script], {
+      env: { ...process.env, DEEPSEEK_API_KEY: 'fake-menu-key', DEEPSEEK_BASE_URL: `http://127.0.0.1:${server.address().port}` }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+    });
+    t.after(() => { if (child.exitCode === null) child.kill(); });
+    let output = '', cursor = 0;
+    child.stdout.on('data', chunk => { output += chunk; }); child.stderr.on('data', chunk => { output += chunk; });
+    const exited = new Promise(resolve => child.once('close', resolve));
+    const waitFor = text => new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { clean(); reject(new Error(`等待 ${text} 超时：${output}`)); }, 3000);
+      const clean = () => { clearTimeout(timer); child.stdout.removeListener('data', check); child.removeListener('close', stopped); };
+      const stopped = () => { clean(); reject(new Error(`提前退出：${output}`)); };
+      const check = () => { const index = output.indexOf(text, cursor); if (index >= 0) { cursor = index + text.length; clean(); resolve(); } };
+      child.stdout.on('data', check); child.once('close', stopped); check();
+    });
+    await waitFor('选择启动方式'); child.stdin.write('\r');
+    await waitFor('\x1b[?25l接下来做什么'); child.stdin.write('3\r');
+    await waitFor('\x1b[?25l接下来做什么'); assert.match(output, /knowledge_search \[本地资料\/RAG\]/); child.stdin.write('4\r');
+    await waitFor('选择检索资料的目录'); child.stdin.write('2\r');
+    await waitFor('使用当前目录：use'); child.stdin.write('\r');
+    await waitFor('\x1b[?25l接下来做什么'); assert.match(output, /资料范围已切换：use/); child.stdin.write('\r');
+    await waitFor('你> '); child.stdin.write('edit\r');
+    await waitFor('是否执行上面的操作'); child.stdin.write(allow ? '\x1b[B\r' : '\r');
+    await waitFor('\x1b[?25l接下来做什么'); child.stdin.write('8\r');
+    const exitTimer = setTimeout(() => { console.error(output); child.kill(); }, 2000);
+    const exitCode = await exited; clearTimeout(exitTimer);
+    assert.equal(exitCode, 0, output);
+    assert.match(output, allow ? /修改完成/ : /写入被拒绝/);
+    assert.equal(await readFile(path.join(root, 'note.txt'), 'utf8'), allow ? 'after' : 'before');
+  }
+});
+
 test('真实 CLI + 模拟 API：读取、写入提议、授权策略、回答和会话', async t => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'harness-cli-'));
   t.after(() => rm(root, { recursive: true, force: true }));

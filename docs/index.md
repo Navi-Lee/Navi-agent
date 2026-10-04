@@ -6,6 +6,8 @@
 
 三份原文各有用途：[README](../README.md) 查启动命令，[学习文档](learning-guide.md) 看解释和练习，[架构文档](architecture.md) 查接口与扩展约定。
 
+**使用时也不用背命令。** 运行 `npm start`，方向键选启动方式，回车确认；接着可以选示例任务、工具列表、资料目录或历史会话。只有问题内容需要自己输入；写文件等操作也用菜单确认，默认不执行。→ [看菜单操作与代码解释](learning-guide.md#guide-cli)
+
 ## 1. 现在能做什么
 
 | 你想做的事 | 程序怎样完成 | 继续看 |
@@ -83,6 +85,7 @@ Token 是模型处理文字的计量单位，不等于字符数。日志会显�
 | 你想知道什么 | 负责的代码 | 对应解释 |
 | --- | --- | --- |
 | 启动参数、用户输入、确认和日志怎么接起来 | [cli.js](../src/cli.js) | [入口装配](learning-guide.md#guide-cli) |
+| 方向键菜单和文字输入怎样交替工作 | [terminal-ui.js](../src/terminal-ui.js) | [菜单解释](learning-guide.md#guide-cli) |
 | 模型和工具怎么不断循环 | [agent.js](../src/agent.js) | [主循环](learning-guide.md#guide-agent) |
 | 怎么把消息发给 DeepSeek、处理超时和重试 | [provider.js](../src/provider.js) | [模型接入](learning-guide.md#guide-provider) |
 | 本地文件、命令、网页工具怎么执行 | [tools.js](../src/tools.js) | [本地工具](learning-guide.md#guide-local-tools) |
